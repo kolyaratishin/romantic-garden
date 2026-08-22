@@ -484,17 +484,32 @@
 
     .hint {
       position: absolute;
-      right: 16px;
-      bottom: 14px;
-      color: rgba(255,255,255,.35);
-      font-size: 12px;
+      left: 50%;
+      bottom: 5%;
+      transform: translate(-50%, 10px);
+      width: max-content;
+      max-width: 86vw;
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: rgba(255,255,255,.90);
+      background: rgba(6, 9, 25, .62);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+      font-size: 13px;
+      font-weight: 650;
+      text-align: center;
       opacity: 0;
-      transition: opacity .6s ease;
+      transition: opacity .6s ease, transform .6s ease;
       pointer-events: none;
-      z-index: 12;
+      z-index: 30;
     }
 
-    .hint.show { opacity: 1; }
+    .hint.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
 
 
     .final-surprise {
@@ -580,7 +595,13 @@
       }
       .flower { width: 42px; height: 66px; }
       .sky-button { bottom: max(5%, env(safe-area-inset-bottom)); }
-      .hint { display: none; }
+      .hint {
+        display: block;
+        bottom: max(4%, calc(env(safe-area-inset-bottom) + 14px));
+        font-size: 12px;
+        padding: 9px 12px;
+        max-width: 82vw;
+      }
       .wish-card { padding: 24px 18px calc(24px + env(safe-area-inset-bottom)); }
       .wish-card input { font-size: 16px; }
     }
@@ -603,7 +624,7 @@
     </div>
 
     <div class="message" id="message"></div>
-    <div class="hint" id="hint">Затисни мишку на секунду ✨</div>
+    <div class="hint" id="hint">Спробуй затримати дотик трохи довше ✨</div>
 
     <button class="sky-button" id="skyButton">Подивитись на небо ✨</button>
 
@@ -626,6 +647,9 @@
   </div>
 
   <script>
+    // Paste your deployed Google Apps Script Web App URL here:
+    const WISH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzldNubG6vuVziooLx0wwCCSb19IBbjkCTZcqvBSOWHe3BlnJa5wBa7fr6WvWZcr-uRpA/exec';
+
     const garden = document.getElementById('garden');
     const firefliesLayer = document.getElementById('fireflies');
     const butterfliesLayer = document.getElementById('butterflies');
@@ -728,7 +752,7 @@
       butterfliesLayer.appendChild(b);
     }
 
-    function showMessage(text, duration = 3000) {
+    function showMessage(text, duration = 5200) {
       clearTimeout(messageTimer);
       message.textContent = text;
       message.classList.add('show');
@@ -750,17 +774,22 @@
         sky.classList.add('bright');
         createFirefly(7);
       }
+      if (clicks === 4) {
+        hint.classList.add('show');
+      }
+      if (clicks === 9) {
+        hint.classList.remove('show');
+      }
       if (clicks === 13) {
         createButterfly();
-        hint.classList.add('show');
       }
       if (clicks === 16) {
         createButterfly();
         createFirefly(8);
-        showMessage('Дивно, як деякі речі стають красивішими від одного дотику.', 4200);
+        showMessage('Дивно, як деякі речі стають красивішими від одного дотику.', 7000);
       }
       if (clicks === 21) {
-        showMessage('Мабуть, з людьми інколи так само.', 4200);
+        showMessage('Мабуть, з людьми інколи так само.', 7000);
       }
       if (clicks === 24) {
         skyButton.classList.add('show');
@@ -871,6 +900,33 @@
       }
     }
 
+
+    async function sendWishToOwner(wish) {
+      if (!wish || !WISH_ENDPOINT || WISH_ENDPOINT.includes('PASTE_YOUR_')) {
+        return false;
+      }
+
+      const payload = new URLSearchParams();
+      payload.set('wish', wish);
+      payload.set('sentAt', new Date().toISOString());
+      payload.set('source', 'romantic-garden');
+
+      try {
+        await fetch(WISH_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: payload.toString()
+        });
+        return true;
+      } catch (err) {
+        console.error('Wish sending failed:', err);
+        return false;
+      }
+    }
+
     wishButton.addEventListener('click', (e) => {
       e.stopPropagation();
       const wish = wishInput.value.trim();
@@ -884,6 +940,9 @@
           localStorage.setItem('nightGardenWish', wish);
           localStorage.setItem('nightGardenWishTime', new Date().toISOString());
         } catch (_) {}
+
+        // Send silently to your private Google Sheet.
+        sendWishToOwner(wish);
       }
 
       setTimeout(() => {
@@ -905,7 +964,7 @@
               І якщо воно було про людину, яка надіслала тобі це посилання —
               у цього бажання підозріло хороші шанси 🙂
             </span>
-            <div class="wish-note">P.S. бажання залишається секретом на цьому пристрої.</div>
+            <div class="wish-note">P.S. Небо вже запам’ятало його ✨</div>
           `;
         }, 1800);
 
